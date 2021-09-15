@@ -1,3 +1,5 @@
+#This program enters the "data" directory reads file
+#containing a series of snapshots of position and velocity of szabo particles.
 import os
 import sys
 
@@ -46,8 +48,8 @@ while 1 :
     if line_splitted[0] == "TIME:" :
         counter += 1
         line = input_file.readline()  #here you may take the snapshotparameters
-    else:
         line = input_file.readline()  #this is X Y X_Virtual...
+    else:
         line_splitted = list(map(float,line.split()))
         global_matrix[counter].append(line_splitted)
 
@@ -55,7 +57,7 @@ while 1 :
 for j in range(snapshot_counter):
     print("\n -> Snapshot %d\n"%j)
     for i in global_matrix[j] :
-        print(i)
+        print(i[0])
 
         
 
