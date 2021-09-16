@@ -102,7 +102,7 @@ global_matrix=construct_global_matrix(input_file_name,snapshot_counter)
 #print all data after reading
 #printall(global_matrix)
         
-#calculo do phi do vicseck e gráfico por snapshot
+#calculus of vicseck order parameter and graphics at each snapshot
 phi_calc(global_matrix,snapshot_counter)
 
     
