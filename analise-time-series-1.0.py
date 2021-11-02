@@ -23,10 +23,7 @@ def init():
     index=verifica(question1,n_files)
     print("\n -> Analyzing file: %s\n"%files_in_dir[index])
     input_file_name=path+files_in_dir[index]
-    question2="Available measures:\n1- Vicsek parameter\n2- Display system snapshot
-images\n3- Cluster distribution \n4- Density distribution\n5- Phi
-distribution\n You may choose anyany group of integers in the interval
-1..5.\n E.g. 1 2 or 3 4 5\n"
+    question2="Available measures:\n1- Vicsek parameter\n2- Display system snapshot images\n3- Cluster distribution \n4- Density distribution\n5- Phi distribution\n You may choose anyany group of integers in the interval 1..5.\n E.g. 1 2 or 3 4 5\n"
     measure=verifica2(question2)
     return(path,input_file_name,measure)
 
