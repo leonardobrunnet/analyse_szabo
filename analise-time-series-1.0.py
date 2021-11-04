@@ -144,7 +144,10 @@ def phi_calc(global_matrix, snapshot_counter):
     plt.xlabel("time")
     plt.ylabel("phi")
     plt.legend()
+    fig=plt.gcf()
     plt.show()
+    figname="average_phi.png"
+    fig.savefig(figname)
     return
 
 def images(global_matrix, snapshot_counter):
@@ -181,7 +184,10 @@ def density_distribution(nt,snapshot_counter,number_particles):
     sns.distplot(rho_av, hist =True, bins=20, kde=True, color='#1F78B4', label=legend)
     plt.title("Density distribution")
     plt.legend()
+    fig=plt.gcf()
     plt.show()
+    figname="density_distribution.png"
+    fig.savefig(figname)
     return
 
 def phi_time_average(nt,snapshot_counter):
@@ -200,7 +206,10 @@ def phi_time_average(nt,snapshot_counter):
     sns.distplot(phi_av_time, hist=True, bins=20, kde=True, color='#1F78B4', label=legend)
     plt.title(r" $\phi$ distribution")
     plt.legend()
+    fig = plt.gcf()
     plt.show()
+    figname="phi_distribution.png"
+    fig.savefig(figname)
     return
 
 def distmat_square(X):
@@ -329,35 +338,47 @@ def cluster_dist(glob_array,number_particles):
             break
     for i,w in enumerate(reversed(clust_dist)):
         if w > 0 :
-            print(i,w)
+            #print(i,w)
             xmax = len(clust_dist)-i
             break
 
-    print(xmin,xmax)
-            
+    #print(xmin,xmax)
+    ans="y"
     xlim=[xmin,xmax]
-    histo_dens(clust_dist,xlim)
+    histo_dens(clust_dist,xlim,ans)
     print("Reset x limits? y or n")
     ans = sys.stdin.readline().split()[0]
     
     while ans == "y" :
         print("Enter new min/max limits for x. E.g. 2 20. (min=1;max=%d)"%(number_particles+1))
         xlim=list(map(int,sys.stdin.readline().split()))
-        histo_dens(clust_dist,xlim)
+        histo_dens(clust_dist,xlim,ans)
         print("Reset x limit? y or n")
         ans = sys.stdin.readline().split()[0]
+    histo_dens(clust_dist,xlim,ans)
     return
 
 
-def histo_dens(clust_dist,xlim):
+def histo_dens(clust_dist,xlim,ans):
 #    fig, ax = plt.subplots()
     x=np.arange(xlim[0],xlim[1])
     plt.bar(x,clust_dist[xlim[0]:xlim[1]])
+    gamma=0
+    norm =0
+    for i,v in enumerate(clust_dist):
+        gamma+=i**2*v
+        norm+=i*v
+    gamma=np.sqrt(gamma)/norm
+    #print(gamma,norm)
 #    sns.distplot(clust_dist, hist=True, ax=ax,  kde=True, color='#1F78B4', bins=20)
 #ax.set_xlim(1,xlim)
-    plt.title("Cluster distribution")
+    plt.title("Cluster distribution - $\gamma$=%.3f"%gamma)
     #ax.set_xticks(range(1,32))
-    plt.show()
+    if ans == "y" :
+        plt.show()
+    if ans == "n" :
+        figname="cluster_distribution.png"
+        plt.savefig(figname)
 
     #legend=("Cluster distribution = {0:.3f} ".format(number_particles/size**2))
     #sns.distplot(clust_dist, hist =True, bins=20, kde=True, color='#1F78B4', range=rangex)#, label=legend)
