@@ -9,9 +9,10 @@ import torch
 
 def init():
     path="data/"   #files of interest are in data directory just below
-    ensure_dir(path)
+    #ensure_dir(path)
     files_in_dir=os.listdir(path) 
     n_files=len(files_in_dir) #number of files and dirs in path
+    os.makedirs("output",exist_ok=True) #create output directory
     if n_files == 0 :
         print("Please, put data files in directory 'data' and restart the program.")
         exit()
@@ -79,9 +80,19 @@ def snapshot_count(input_file_name):
     snapshot_counter = 0
     while 1 :
         line = input_file.readline()
+        #print(line)
         if not line:
             break #EOF
         line_splitted = line.split()
+        #print(line_splitted)
+        if line_splitted == [] :
+            line_splitted = input_file.readline().split()
+        if line_splitted[0] == "NEXT" :
+            line_splitted = input_file.readline().split()
+            line = input_file.readline()
+            if not line :
+                break
+            line_splitted = line.split() 
         if line_splitted[0] == "TIME:" :
             size=int(line_splitted[20].split(".")[0])
             v0=float(line_splitted[23])
@@ -105,6 +116,14 @@ def construct_global_matrix(input_file_name,snapshot_counter):
         if not line:
             break #EOF
         line_splitted = line.split()
+        if line_splitted == [] :
+            line_splitted = input_file.readline().split()
+        if line_splitted[0] == "NEXT" :
+            line_splitted = input_file.readline().split()
+            line = input_file.readline()
+            if not line :
+                break
+            line_splitted = line.split() 
         if line_splitted[0] == "TIME:" :
             counter += 1
             line = input_file.readline()  #here you may take the snapshotparameters
@@ -146,7 +165,7 @@ def phi_calc(global_matrix, snapshot_counter):
     plt.legend()
     fig=plt.gcf()
     plt.show()
-    figname="average_phi.png"
+    figname="output/average_phi.png"
     fig.savefig(figname)
     return
 
@@ -186,7 +205,7 @@ def density_distribution(nt,snapshot_counter,number_particles):
     plt.legend()
     fig=plt.gcf()
     plt.show()
-    figname="density_distribution.png"
+    figname="output/density_distribution.png"
     fig.savefig(figname)
     return
 
@@ -208,7 +227,7 @@ def phi_time_average(nt,snapshot_counter):
     plt.legend()
     fig = plt.gcf()
     plt.show()
-    figname="phi_distribution.png"
+    figname="output/phi_distribution.png"
     fig.savefig(figname)
     return
 
@@ -377,7 +396,7 @@ def histo_dens(clust_dist,xlim,ans):
     if ans == "y" :
         plt.show()
     if ans == "n" :
-        figname="cluster_distribution.png"
+        figname="output/cluster_distribution.png"
         plt.savefig(figname)
 
     #legend=("Cluster distribution = {0:.3f} ".format(number_particles/size**2))
