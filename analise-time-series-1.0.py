@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import torch
+import time
 
 def init():
     path="data/"   #files of interest are in data directory just below
@@ -24,7 +25,7 @@ def init():
     index=verifica(question1,n_files)
     print("\n -> Analyzing file: %s\n"%files_in_dir[index])
     input_file_name=path+files_in_dir[index]
-    question2="Available measures:\n1- Vicsek parameter\n2- Display system snapshot images\n3- Cluster distribution \n4- Density distribution\n5- Phi distribution\n You may choose anyany group of integers in the interval 1..5.\n E.g. 1 2 or 3 4 5\n"
+    question2="Available measures:\n1- Vicsek parameter\n2- Display system snapshot images\n3- Gamma cluster parameter evolution \n4- Density distribution\n5- Phi distribution\n You may choose any group of integers in the interval 1..5.\n E.g. 1 2 or 3 4 5\n"
     measure=verifica2(question2)
     return(path,input_file_name,measure)
 
@@ -59,12 +60,11 @@ def verifica2(question):
             
 def verifica3(question):
     print(question)
-    while True :
-        value  = sys.stdin.readline().split()
-        if not value :
-            return float(1.1)
-        else:
-            return float(value[0])
+    value  = sys.stdin.readline().split()
+    if not value :
+        return float(1.1)
+    else:
+        return float(value[0])
 
 def verifica4(question):
     print(question)
@@ -75,6 +75,17 @@ def verifica4(question):
             return int(10)
         else:
             return int(value[0])
+        
+def verifica5(question):
+    print(question)
+    while True :
+        value  = sys.stdin.readline().split()
+        if not value:
+            print("Value considered by default lbox=2\n")
+            return int(2)
+        else:
+            return int(value[0])
+
 def snapshot_count(input_file_name):
     input_file=open(input_file_name)
     snapshot_counter = 0
@@ -105,6 +116,32 @@ def snapshot_count(input_file_name):
     ### You may improve the lines above to choose the snapshots you want
     return snapshot_counter,size,v0
 
+#Particle class definition
+class particle:
+    def __init__(self, index, x, y, vx, vy, theta ):
+        self.index = index
+        self.x=x   #these are np arrays for all snapshots of each particle
+        self.y=y
+        self.r=np.array([x,y])
+        self.vx=vx
+        self.vy=vy
+        self.theta=theta
+        self.Mybox=[]
+        self.Myneigbohrs=[]
+
+    def mybox(self,lbox,nx): #each particle calculates the box it is in at the different snaphots
+        #aux=(np.array(list(map(int,self.x[:]/lbox)))+nx*np.array(list(map(int,self.y[:]/lbox))))
+        aux=(self.x[:]/lbox).astype(int)+nx*(self.y[:]/lbox).astype(int)
+        self.Mybox=list(aux)
+        return 
+                
+#Box class definition
+class boite:
+    #a list for each snapshot
+    def __init__(self,index,snapshot_counter):
+        self.index = index
+        self.mylist = list( [] for i in range(snapshot_counter))
+        return
 
 
 def construct_global_matrix(input_file_name,snapshot_counter):
@@ -126,11 +163,14 @@ def construct_global_matrix(input_file_name,snapshot_counter):
             line_splitted = line.split() 
         if line_splitted[0] == "TIME:" :
             counter += 1
+            print("Image=%d"%counter)
             line = input_file.readline()  #here you may take the snapshotparameters
             line = input_file.readline()  #this is X Y X_Virtual...
         else:
             line_splitted = list(map(float,line.split()))
             global_matrix[counter].append(line_splitted)
+    #print(global_matrix)
+    #exit()
     return global_matrix
 
 def printall(global_matrix) :
@@ -229,83 +269,11 @@ def phi_time_average(nt,snapshot_counter):
     plt.show()
     figname="output/phi_distribution.png"
     fig.savefig(figname)
-    return
+    return 
 
-def distmat_square(X):
-        #Xsq = (X**2).sum(axis=-1)
-        #cross = X.matmul(X.T)
-        #D = Xsq[:,None]+Xsq[None,:]-2*cross
-        #D = torch.where(D < 0.00001*torch.ones(1,device=device), 0.00001*torch.ones(1,device=device),D)
-        #return torch.sum(bc_diff(X[:,None,:]-X[None,:,:])**2,axis=2)
-        
-        D = torch.sum((X[:,None,:]-X[None,:,:])**2,axis=2)
-        return D
-def neighbor_list(X,dviz):
-    #Enter the particle's position, return a list of lists of neighbors
-    D=torch.sqrt(distmat_square(X))
-    #define zero and one tensors
-    zero_tensor=torch.zeros(number_particles,number_particles,dtype=int)
-    one_tensor = torch.ones(number_particles,number_particles,dtype=int)
-    #put 1 when you find a neighbor
-    viz=torch.where(D<dviz,one_tensor,zero_tensor)
-    index=torch.tensor(np.arange(1,number_particles+1),dtype=int)
-    #put the particle index relative to each 1.
-    viz=viz[:,:]*index[None,:]
-    #convert to list
-    viz=viz.tolist()
-    #eliminate the zeros
-    part_list=[]
-    for i,w in enumerate(viz):
-        aux=[]
-        for j in w:
-            if j >0 :
-                aux.append(j-1)
-        part_list.append(aux)
-    return part_list
-
-
-
-# def msd(global_matrix,snapshot_counter):
-#     glob=np.array(global_matrix)
-#     for i in range(snapshot_counter - 1 ):
-#         for j in range(glob[i,:].size):
-#             print((glob[i+1][2]-glob[i][2])**2+(glob[i+1][3]-glob[i][3])**2)
-#     return
-
-#Particle class definition
-class particle:
-    def __init__(self, index, x, y, vx, vy, theta ):
-        self.index = index
-        self.x=x   #these are np arrays for all snapshots of each particle
-        self.y=y
-        self.r=np.array([x,y])
-        self.vx=vx
-        self.vy=vy
-        self.theta=theta
-        self.Mybox=[]
-
-    def mybox(self,lbox,nx): #each particle calculates the box it is in at the different snaphots
-        aux=(np.array(list(map(int,self.x[:]/lbox)))+nx*np.array(list(map(int,self.y[:]/lbox))))
-        self.Mybox=list(aux)
-        return 
-                
-#Box class definition
-class boite:
-    #a list for each snapshot
-    def __init__(self,index,snapshot_counter):
-        self.index = index
-        self.mylist = list( [] for i in range(snapshot_counter))
-        return
-
-def part_and_box(size,snapshot_counter,number_particles,glob_array):
+def part_and_box(nx,lbox,size,snapshot_counter,number_particles,glob_array):
     part=list(particle(i,glob_array[:,i,0],glob_array[:,i,1],glob_array[:,i,4],glob_array[:,i,5],glob_array[:,i,6]) for i in range(number_particles))
-    
-    #define the box size used to analyse
-    question4="Enter the box size to make averages. Default is 10."
-    lbox = verifica4(question4)
-    nx=int(size/lbox)+1
-    nt=nx**2
-
+    nt=nx*nx
     #define the boxes as an object list                                                       
     box=list(boite(i,snapshot_counter) for i in range(nt))
 
@@ -324,32 +292,213 @@ def part_and_box(size,snapshot_counter,number_particles,glob_array):
             else:
                 box[k].mylist[i].append(j.index)
     
-    return nt,lbox,box,part
+    return box,part
 
-def cluster_dist(glob_array,number_particles):
+def neighbor_list(X,dviz):
+    size_X=len(X)
+    #print(X)
+    #Enter the particle's position, return a list of lists of neighbors
+    D = torch.sum((X[:,None,:]-X[None,:,:])**2,axis=2)
+    #print(D)
+    dviz=dviz*dviz
+    #define zero and one tensors
+    zero_tensor=torch.zeros(size_X,size_X,dtype=int)
+    one_tensor = torch.ones(size_X,size_X,dtype=int)
+    #put 1 when you find a neighbor
+    viz=torch.where(D<dviz,one_tensor,zero_tensor)
+    #print(viz)
+    index=torch.tensor(np.arange(1,size_X+1),dtype=int)
+    #put the particle index relative to each 1.
+    viz=viz[:,:]*index[None,:]
+    #print(viz)
+    #convert to list
+    viz=viz.tolist()
+    #print(viz)
+    #exit()
+    #eliminate the zeros
+    part_list=[]
+    for i,w in enumerate(viz):
+        aux=[]
+        for j in w:
+            if j > 0 :
+                aux.append(j-1)
+        part_list.append(aux)
+    #print(part_list)
+    return part_list
+
+
+
+# def msd(global_matrix,snapshot_counter):
+#     glob=np.array(global_matrix)
+#     for i in range(snapshot_counter - 1 ):
+#         for j in range(glob[i,:].size):
+#             print((glob[i+1][2]-glob[i][2])**2+(glob[i+1][3]-glob[i][3])**2)
+#     return
+
+def map_box_particle_index_to_global(part_list,boxes_list):
+    part_list_box=[]
+    for i in part_list:
+        aux=[]
+        for j in i:
+            aux.append(boxes_list[j])
+        part_list_box.append(aux)
+    return part_list_box
+            
+
+def part_neighbor_list_by_box(j,lbox,box,glob_array,dviz):
+    Nbox=len(box)
+    nx=int(np.sqrt(Nbox))
+    this_sample_neighbor_list=[]
+    t1=time.time()
+    #Constructing the position tensor of particles in each box and neighboring boxes
+    for i in range(Nbox):
+        #focus box
+        X0=torch.tensor([[glob_array[j,k,0],glob_array[j,k,1]] for k in box[i].mylist[j]])
+        #Selecting neighboring boxes indexes considering periodic boundary conditions
+        ir = i+1
+        if (i+1)%nx == 0: ir = i-nx+1
+        idl=(i+nx-1)%Nbox
+        if i%nx == 0 : idl = (i+2*nx-1)%Nbox
+        idc = (i+nx)%Nbox
+        idr = (i+nx+1)%Nbox
+        if (i+1)%nx == 0 : idr = (i+1)%Nbox
+        #adding box on the right
+        X1=torch.tensor([[glob_array[j,k,0],glob_array[j,k,1]] for k in box[ir].mylist[j]])
+        #adding box a line down in the left
+        X2=torch.tensor([[glob_array[j,k,0],glob_array[j,k,1]] for k in box[idl].mylist[j]])
+        #adding box a line down in the center
+        X3=torch.tensor([[glob_array[j,k,0],glob_array[j,k,1]] for k in box[idc].mylist[j]])
+        #adding box a line down on the right
+        X4=torch.tensor([[glob_array[j,k,0],glob_array[j,k,1]] for k in box[idr].mylist[j]])
+        #adding particle position tensors of focus box + neighboring boxes
+        X = torch.cat((X0,X1,X2,X3,X4),0)
+        if len(X) > 4000:
+            print("Box size too big! Choose a smaller one")
+            exit()
+        part_list = neighbor_list(X,dviz)
+        boxes_list = box[i].mylist[j]+box[ir].mylist[j]+box[idl].mylist[j]+box[idc].mylist[j]+box[idr].mylist[j]
+
+        part_list_box = map_box_particle_index_to_global(part_list,boxes_list)
+        this_sample_neighbor_list+=part_list_box
+        #print(Nbox,part_list_box)
+            #print(part_list)
+            #print(box[i].mylist[j])
+            #print(part_list_box)
+            #print(i,ir,idl,idc,idr)
+            #exit()
+    print(time.time()-t1, "time to calculate distances and construct neighbor lists")
+    return this_sample_neighbor_list
+
+def count_cluster_from_box_list(lists,np):
+    mydict=dict()
+    for i in range(np): #create dictionary: key=particle index, value=list of neighbors
+        mydict[i]=[]
+    #print(mydict)
+    
+    t2=time.time()
+
+    # for i in mydict:
+    #     for j in lists: #scan the boxes list
+    #         if i in j:
+    #             mydict[i]+=j #if particle is in box, add box list as value to particle key index
+    for j in lists:
+        for i in j:
+            mydict[i]+=j
+    for i in mydict:
+        mydict[i]=sorted(set(mydict[i])) #eliminate repeated particle appearance
+
+        
+    for i in mydict:
+        k=len(mydict[i])
+        l=0
+        if k > 1 :
+            while k != l: #adding neighbors of neighbors up to the end
+                k=len(mydict[i])
+                for j in mydict[i]:
+                    if j != i :
+                        #print(np,i)
+                        mydict[i]+=mydict[j]
+                        mydict[i]=sorted(set(mydict[i])) #eliminate repeated particle appearance
+                        #print(i,mydict[i],j,mydict[j])
+                        l=len(mydict[i])
+                        #print(i,k,l)
+
+            #print(mydict)
+    #exit()
+    
+    #eliminate dict lists when they reappear for particles of the same cluster
+    for i in mydict:
+        for j in mydict[i]:
+            if j != i :
+                mydict[j]=[]
+
+    part_list=[]
+    for i in mydict:
+        part_list.append(mydict[i])
+    print(time.time()-t2, " time to separate clusters ")
+    return part_list
+
+                
+def cluster_dist(size,glob_array,number_particles,snapshot_counter):
+    gamma=[]
+    image=[]
     question3="\nEnter the distance to consider two particles as neighbors - Default = 1.1\n"
     dviz=verifica3(question3)
+    nmax=4000
+    print("\nnumber of particles = %d\n"%number_particles)
+    if number_particles>nmax:
+        #define the box size used to analyse
+        question4="Enter the box size to make averages. Default is 10."
+        lbox = verifica4(question4)
+        nx=int(size/lbox)+1
+        nt=nx*nx
+
     
-    #Define torch tensor for particle positions in the last image
-    X=torch.tensor([[glob_array[-1,i,0],glob_array[-1,i,1]] for i in range(number_particles)])
-    #max dist to consider neighbor
+    for k in range(snapshot_counter):
+        print("snapshot number %d"%k)
+        #Define torch tensor for particle positions on each image
+        X=torch.tensor([[glob_array[k,i,0],glob_array[k,i,1]] for i in range(number_particles)])
+        #max dist to consider neighbor
+        if len(X) <= nmax :
+            part_list=neighbor_list(X,dviz)
+            #eliminate dict lists when they reappear for particles of the same cluster
+            for i in range(number_particles):
+                for j in part_list[i]:
+                    if j != i:
+                        part_list[i]+=part_list[j]
+                        part_list[i]=sorted(set(part_list[i]))
+                        part_list[j]=[]
 
-    part_list=neighbor_list(X,dviz)
-
-    for i in range(number_particles):
-        for j in part_list[i]:
-            if j != i:
-                part_list[i]+=part_list[j]
-                part_list[i]=list(set(part_list[i]))
-                part_list[j]=[]
-        #print(part_list[i])
-    clust_dist=np.zeros(number_particles+1)
-    for i in part_list :
-        if not i:
-            continue
         else:
-            #print(i,len(i))
-            clust_dist[len(i)]+=1
+            box,part=part_and_box(nx,lbox,size,snapshot_counter,number_particles,glob_array)
+            this_sample_neighbor_list=part_neighbor_list_by_box(k,lbox,box,glob_array,dviz)
+            part_list=count_cluster_from_box_list(this_sample_neighbor_list,number_particles)
+        
+        clust_dist=np.zeros(number_particles+1)
+        # for i,w in enumerate(part_list):
+        #     print(i,len(w))
+        # exit()
+
+        for i in part_list :
+            if not i:
+                continue
+            else:
+                clust_dist[len(i)]+=1
+        a=gamma_calc(clust_dist)
+        gamma.append(a)
+        image.append(k)
+        print("gamma=%.3f\n"%a)
+    plt.title("Cluster Parameter Evolution")
+    plt.xlabel("time")
+    plt.ylabel("$\Gamma$",rotation=0)
+    fig=plt.gcf()
+    figname="output/gamma_evolution.png"
+    plt.scatter(image,gamma)
+    plt.show()
+    fig.savefig(figname)
+    plt.plot
+              
+    #last snapshot cluster histogram
     xmin,xmax=0,number_particles+1
     for i,w in enumerate(clust_dist):
         if w > 0 :
@@ -378,17 +527,20 @@ def cluster_dist(glob_array,number_particles):
     return
 
 
-def histo_dens(clust_dist,xlim,ans):
-#    fig, ax = plt.subplots()
-    x=np.arange(xlim[0],xlim[1])
-    plt.bar(x,clust_dist[xlim[0]:xlim[1]])
+def gamma_calc(clust_dist):
     gamma=0
     norm =0
     for i,v in enumerate(clust_dist):
         gamma+=i**2*v
         norm+=i*v
     gamma=np.sqrt(gamma)/norm
-    #print(gamma,norm)
+    return gamma
+
+def histo_dens(clust_dist,xlim,ans):
+#    fig, ax = plt.subplots()
+    x=np.arange(xlim[0],xlim[1])
+    plt.bar(x,clust_dist[xlim[0]:xlim[1]])
+    gamma=gamma_calc(clust_dist)
 #    sns.distplot(clust_dist, hist=True, ax=ax,  kde=True, color='#1F78B4', bins=20)
 #ax.set_xlim(1,xlim)
     plt.title("Cluster distribution - $\gamma$=%.3f"%gamma)
@@ -436,13 +588,18 @@ if 2 in measure :
 #Cluster distribution
 if 3 in measure :
 
-    cluster_dist(glob_array,number_particles)
+    cluster_dist(size,glob_array,number_particles,snapshot_counter)
 
 
 if 4 in measure or 5 in measure :
+    #define the box size used to analyse
+    question4="Enter the box size to make averages. Default is 10."
+    lbox = verifica4(question4)
+    nx=int(size/lbox)+1
+    nt=nx*nx
 
     #construct particle class and box class; each particle has arrays of x,y,vx,vy with values for all snapshots
-    nt,lbox,box,part=part_and_box(size,snapshot_counter,number_particles,glob_array)
+    box,part=part_and_box(nx,lbox,size,snapshot_counter,number_particles,glob_array)
 
     #calculate particle density distribution averaged over snapshots
     if 4 in measure :
